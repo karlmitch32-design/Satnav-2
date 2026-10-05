@@ -199,6 +199,14 @@ function armAudio(){try{const AC=window.AudioContext||window.webkitAudioContext;
 function toggleVoice(){voiceOn=!voiceOn;if(!voiceOn&&'speechSynthesis' in window)speechSynthesis.cancel();toast(voiceOn?'Voice guidance on':'Voice guidance off')}
 function angleWrap(a){return ((a%360)+360)%360;}
 function smoothHeading(a,b){if(b==null||!Number.isFinite(b))return a;if(a==null||!Number.isFinite(a))return angleWrap(b);const d=((b-a+540)%360)-180;const gain=Math.abs(d)>45?.18:.30;return angleWrap(a+d*gain);}
+function routeBearingAt(index){
+  if(!routeGeo?.coordinates?.length)return null;
+  const cs=routeGeo.coordinates;
+  let i=Number.isFinite(+index)?Math.floor(+index):0;
+  i=Math.max(0,Math.min(i,cs.length-2));
+  const a={lat:cs[i][1],lon:cs[i][0]},b={lat:cs[i+1][1],lon:cs[i+1][0]};
+  return bearing(a,b);
+}
 function headingFromMotion(p){if(!lastPos||!p)return null;const d=hav(lastPos,p);if(d<2)return null;return bearing(lastPos,p);}
 function stableNavigationHeading(p,near){
   const gps=Number.isFinite(p?.heading)?p.heading:null;
