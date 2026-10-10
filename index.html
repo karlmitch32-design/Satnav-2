@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#050505">
 <title>UK satnav</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
 :root{--red:#ff173f;--red2:#ff3858;--red3:#ff003c;--blue:#00aaff;--blue2:#2ed7ff;--bg:#050505;--panel:#111114;--panel2:#19191d;--muted:#8e8e96;--green:#57ff9a;--amber:#ffd45c}
@@ -30,7 +31,7 @@ button,input{font:inherit}
  linear-gradient(180deg,rgba(255,255,255,.015),transparent 40%),
  radial-gradient(ellipse at 50% 72%,rgba(255,23,63,.14),transparent 42%),
  #08080b;box-shadow:inset 0 0 45px rgba(255,23,63,.05),0 0 30px rgba(255,23,63,.11)}
-.horizon:before{content:"";position:absolute;left:0;right:0;top:42%;height:1px;background:linear-gradient(90deg,transparent,#38383f,transparent)}
+#realMap{position:absolute;inset:0;z-index:1;background:#101014}.horizon.map-ready .road,.horizon.map-ready .lane-left,.horizon.map-ready .lane-right,.horizon.map-ready .road-live,.horizon.map-ready .route-glow,.horizon.map-ready .nav-arrow,.horizon.map-ready .you{display:none!important}.horizon.map-ready:before{display:none}.leaflet-container{background:#101014;color:#fff;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.leaflet-control-attribution{font-size:8px!important}.leaflet-control-zoom{display:none}.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#111114;color:#fff;border:1px solid #ff173f}.leaflet-div-icon{background:transparent;border:0}.gps-puck{width:18px;height:18px;border-radius:50%;background:#00aaff;border:3px solid #fff;box-shadow:0 0 0 7px #00aaff44,0 0 18px #00aaff}.dest-puck{width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#ff173f;border:2px solid #fff;box-shadow:0 0 15px #ff173f}.horizon:before{content:"";position:absolute;left:0;right:0;top:42%;height:1px;background:linear-gradient(90deg,transparent,#38383f,transparent)}
 .road{position:absolute;left:50%;bottom:-30px;transform:translateX(-50%);width:76%;height:72%;background:linear-gradient(90deg,#101014,#202027 50%,#101014);clip-path:polygon(39% 0,61% 0,100% 100%,0 100%);border-left:1px solid #292930;border-right:1px solid #292930;transition:opacity .25s ease}.road-live{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:visible;opacity:0;transition:opacity .25s ease}.road-live path{fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}.road-live .road-surface{stroke:#17171d;stroke-width:34;opacity:.96}.road-live .road-edge{stroke:#34343d;stroke-width:1.5;opacity:.9}.road-live .road-centre{stroke:#bcbcc4;stroke-width:1.5;stroke-dasharray:7 9;opacity:.52}.road-live.live{opacity:1}.road-live.live~.road{opacity:.08}
 .road:after{content:"";position:absolute;left:50%;top:3%;height:97%;width:4px;transform:translateX(-50%);background:repeating-linear-gradient(to bottom,rgba(255,255,255,.45) 0 26px,transparent 26px 53px);opacity:.45}
 .lane-left,.lane-right{position:absolute;bottom:15%;width:2px;height:46%;background:linear-gradient(transparent,rgba(255,23,63,.65));box-shadow:0 0 8px rgba(255,23,63,.5)}
@@ -80,7 +81,8 @@ button,input{font:inherit}
       <div class="route-stat"><b id="eta">--:--</b><span id="distance">--</span></div>
     </section>
 
-    <section class="horizon">
+    <section class="horizon" id="horizon">
+      <div id="realMap" aria-label="Live road map"></div>
       <svg class="road-live" id="roadLive" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path id="roadSurfacePath" class="road-surface"/><path id="roadEdgePath" class="road-edge"/><path id="roadCentrePath" class="road-centre"/></svg><div class="road"></div><svg class="route-glow" id="routeGlow" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path id="routeGlowPath" d="M50 100 C50 82 50 68 50 56 C50 44 50 35 50 22"/><path id="routeCorePath" d="M50 100 C50 82 50 68 50 56 C50 44 50 35 50 22"/></svg><div class="lane-left"></div><div class="lane-right"></div>
       <div class="manoeuvre"><div class="distance" id="manDist">READY</div><div class="instruction red" id="instruction">Set a destination</div></div>
       <div class="signal">● <b id="signalText">STANDBY</b></div>
@@ -115,6 +117,7 @@ button,input{font:inherit}
 </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 "use strict";
 
@@ -123,6 +126,39 @@ button,input{font:inherit}
    External services: Nominatim (search), OSRM (routing), Overpass (nearby road/speed metadata). No API key is required. */
 
 const $=id=>document.getElementById(id);
+// Real street-map layer: keeps the existing red/black cockpit while displaying mapped roads and the routed path.
+let streetMap=null, streetTiles=null, routeLine=null, routeCasing=null, gpsMarker=null, destinationMarker=null;
+function initStreetMap(){
+  if(streetMap||!window.L)return;
+  try{
+    streetMap=L.map("realMap",{zoomControl:false,attributionControl:true,preferCanvas:true}).setView([54.5,-3.2],6);
+    streetTiles=L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(streetMap);
+    streetMap.on("tileerror",()=>{ $("routeState").textContent="Map tiles unavailable — check connection"; });
+    $("horizon").classList.add("map-ready");
+    setTimeout(()=>streetMap&&streetMap.invalidateSize(),150);
+  }catch(e){streetMap=null;}
+}
+function showGpsOnMap(pos){
+  if(!streetMap||!pos?.coords)return;
+  const ll=[pos.coords.latitude,pos.coords.longitude];
+  const icon=L.divIcon({className:"",html:'<div class="gps-puck"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+  if(!gpsMarker)gpsMarker=L.marker(ll,{icon,zIndexOffset:1000}).addTo(streetMap);else gpsMarker.setLatLng(ll);
+  if(state.started&&!state.route)streetMap.setView(ll,17,{animate:false});
+  if(state.started&&state.route&&state.gpsAccuracy<60)streetMap.panTo(ll,{animate:false});
+}
+function drawRealRoute(route){
+  if(!streetMap||!route?.geometry?.coordinates?.length)return;
+  const latlngs=route.geometry.coordinates.map(c=>[c[1],c[0]]);
+  if(routeCasing)streetMap.removeLayer(routeCasing);if(routeLine)streetMap.removeLayer(routeLine);
+  routeCasing=L.polyline(latlngs,{color:"#001b2b",weight:12,opacity:.95,lineCap:"round",lineJoin:"round"}).addTo(streetMap);
+  routeLine=L.polyline(latlngs,{color:"#00baff",weight:6,opacity:.98,lineCap:"round",lineJoin:"round"}).addTo(streetMap);
+  const bounds=routeLine.getBounds();if(bounds.isValid())streetMap.fitBounds(bounds,{padding:[28,28],maxZoom:17,animate:false});
+}
+function showDestinationOnMap(dest){
+  if(!streetMap||!dest)return;
+  const ll=[dest.lat,dest.lon],icon=L.divIcon({className:"",html:'<div class="dest-puck"></div>',iconSize:[22,22],iconAnchor:[11,22]});
+  if(!destinationMarker)destinationMarker=L.marker(ll,{icon}).addTo(streetMap);else destinationMarker.setLatLng(ll);
+}
 const state={
   watchId:null, position:null, destination:null, route:null, steps:[],
   lastStep:-1, started:false, voice:true, lastVoice:"", lastVoiceAt:0,
@@ -223,6 +259,7 @@ async function setDestination(x){
   state.routeRequest++;state.rerouting=false;
   state.destination={lat:+x.lat,lon:+x.lon,name:x.display_name};
   state.route=null;state.steps=[];state.routeCoords=null;state.snap=null;state.lastStep=-1;state.offRouteCount=0;
+  initStreetMap();showDestinationOnMap(state.destination);
   $("routeGlow").classList.remove("live");$("roadLive").classList.remove("live");
   $("destName").textContent=(x.display_name||"Destination").split(",").slice(0,2).join(", ");
   $("routeState").textContent="Destination selected — calculating route…";
@@ -243,6 +280,7 @@ async function calculateRoute(reason="initial"){
     const route=data.routes[0];
     if(!route.geometry?.coordinates||route.geometry.coordinates.length<2||!Number.isFinite(route.distance))throw Error("invalid geometry");
     state.route=route;state.steps=route.legs.flatMap(l=>l.steps||[]);state.routeTotal=route.distance;
+    initStreetMap();drawRealRoute(route);showDestinationOnMap(state.destination);
     state.lastStep=-1;state.routeProgress=0;state.arrived=false;state.routeCoords=route.geometry.coordinates;
     state.offRouteCount=0;state.lastRerouteAt=Date.now();
     $("routeGlow").classList.add("live");
@@ -523,6 +561,7 @@ function onPosition(pos){
     }
   }
   state.position=pos;state.lastAcceptedPosition=pos;
+  initStreetMap();showGpsOnMap(pos);if(state.destination)showDestinationOnMap(state.destination);
   if(Number(c.speed)>0)state.lastGpsSpeed=c.speed;
   $("gpsText").textContent=state.gpsAccuracy>45?"GPS LIVE*":"GPS LIVE";$("signalText").textContent=state.gpsAccuracy>45?"LOW ACCURACY":"LIVE";
   $("liveDot").style.background=state.gpsAccuracy>45?"var(--amber)":"var(--green)";
