@@ -37,18 +37,18 @@ jobs:
               raise SystemExit("FAIL: index.html is missing from the repository root")
           html = html_path.read_text(encoding="utf-8")
 
-          scripts = re.findall(r'<script\\b(?![^>]*\\bsrc\\s*=)[^>]*>(.*?)</script\\s*>', html, re.I | re.S)
+          scripts = re.findall(r'<script\b(?![^>]*\bsrc\s*=)[^>]*>(.*?)</script\s*>', html, re.I | re.S)
           if not scripts:
               raise SystemExit("FAIL: no inline JavaScript was found")
-          Path("/tmp/satnav-inline.js").write_text("\\n".join(scripts), encoding="utf-8")
+          Path("/tmp/satnav-inline.js").write_text("\n".join(scripts), encoding="utf-8")
 
-          ids = re.findall(r'\\bid=["\\\']([^"\\\']+)["\\\']', html, re.I)
+          ids = re.findall(r'\bid=["\']([^"\']+)["\']', html, re.I)
           duplicates = sorted({item for item in ids if ids.count(item) > 1})
           if duplicates:
               raise SystemExit("FAIL: duplicate HTML ids: " + ", ".join(duplicates))
 
-          js = "\\n".join(scripts)
-          referenced = set(re.findall(r'\\$\\(\\s*["\\\']([^"\\\']+)["\\\']\\s*\\)', js))
+          js = "\n".join(scripts)
+          referenced = set(re.findall(r'\$\(\s*["\']([^"\']+)["\']\s*\)', js))
           missing = sorted(referenced - set(ids))
           if missing:
               raise SystemExit("FAIL: JavaScript references missing HTML ids: " + ", ".join(missing))
@@ -59,7 +59,7 @@ jobs:
               raise SystemExit("FAIL: required satnav elements missing: " + ", ".join(missing_required))
 
           required_functions = ["startGPS", "onPosition", "calculateRoute", "updateNavigation", "checkSpeedLimit"]
-          missing_functions = [name for name in required_functions if not re.search(r'\\bfunction\\s+' + re.escape(name) + r'\\s*\\(', js)]
+          missing_functions = [name for name in required_functions if not re.search(r'\bfunction\s+' + re.escape(name) + r'\s*\(', js)]
           if missing_functions:
               raise SystemExit("FAIL: required navigation functions missing: " + ", ".join(missing_functions))
 
