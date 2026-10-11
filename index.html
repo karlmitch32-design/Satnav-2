@@ -59,7 +59,7 @@ button,input{font:inherit}
 .hidden{display:none!important}
 @media(max-height:700px){.status{height:35px;flex-basis:35px}.horizon{min-height:210px}.stats .stat{min-height:50px;padding:5px}.ctrl{height:42px}.orb{margin:20px 0}}
 </style>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
 <div class="phone">
@@ -112,7 +112,7 @@ button,input{font:inherit}
 </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 "use strict";
 
@@ -142,7 +142,7 @@ function initRoadMap(){
   if(!window.L||state.roadMap)return;
   const host=$("roadMap");if(!host)return;
   state.roadMap=L.map(host,{zoomControl:false,attributionControl:true,preferCanvas:true,zoomAnimation:false,fadeAnimation:false}).setView([51.5,-0.1],15);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{subdomains:"abcd",maxZoom:20,attribution:'&copy; OpenStreetMap contributors &copy; CARTO'}).addTo(state.roadMap);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{subdomains:["a","b","c"],maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(state.roadMap);
   $("horizon")?.classList.add("map-ready");
   state.gpsMarker=L.marker([51.5,-0.1],{icon:L.divIcon({className:"",html:'<div class="gps-arrow"></div>',iconSize:[30,36],iconAnchor:[15,18]}),interactive:false,zIndexOffset:1000}).addTo(state.roadMap);
   state.gpsMarker.setOpacity(0);
@@ -158,6 +158,7 @@ function drawRouteOnMap(){
   if(state.destinationMarker)state.roadMap.removeLayer(state.destinationMarker);
   state.destinationMarker=L.marker([state.destination.lat,state.destination.lon],{icon:L.divIcon({className:"",html:'<div class="destination-pin"></div>',iconSize:[16,16],iconAnchor:[8,8]}),zIndexOffset:500}).addTo(state.roadMap);
   if(state.position)updateRoadMapPosition(state.position.coords);
+  else if(!state.started)state.roadMap.fitBounds(state.routeGlow.getBounds(),{padding:[28,28],maxZoom:16});
 }
 function updateRoadMapPosition(p){
   if(!state.roadMap||!p||!isFinite(p.latitude)||!isFinite(p.longitude))return;
