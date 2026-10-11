@@ -1,0 +1,36 @@
+name: UK satnav code checks
+
+on:
+  push:
+    branches:
+      - main
+      - "satnav/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    name: HTML and JavaScript checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Check HTML structure and navigation hooks
+        run: python3 scripts/check-satnav.py
+
+      - name: Check JavaScript syntax
+        run: node --check /tmp/satnav-inline.js
+
+      - name: Report static build result
+        run: echo "PASS: static code checks completed; live GPS and routing still require device testing."
