@@ -50,7 +50,7 @@ button,input{font:inherit}
 .alert{min-height:36px;border-radius:12px;border:1px solid #3a2025;background:#170d10;color:#fff;padding:9px 11px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;text-align:center;margin-bottom:7px;box-shadow:0 0 16px rgba(255,23,63,.08)}.alert.hidden{visibility:hidden}.alert.warn{border-color:var(--red);box-shadow:0 0 18px rgba(255,23,63,.28)}.alert.safe{border-color:#22563a;background:#0c1711;color:var(--green)}
 .controls{display:grid;grid-template-columns:1fr 1.35fr 1fr;gap:7px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
 .ctrl{height:46px;border-radius:14px;border:1px solid #2d2d34;background:#151519;color:#fff;font-weight:800}.ctrl.primary{background:var(--red);border-color:var(--red);box-shadow:0 0 18px rgba(255,23,63,.34)}.ctrl:active{transform:scale(.98)}.ctrl:disabled{opacity:.45}
-.start-panel{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 48%,rgba(0,132,255,.18),transparent 42%),linear-gradient(180deg,#03070d,#050505 65%,#02060b);z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center}
+.start-panel{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 48%,rgba(0,132,255,.18),transparent 42%),linear-gradient(180deg,#03070d,#050505 65%,#02060b);z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center} .start-panel{display:none!important}
 .logo{font-size:38px;font-weight:950;letter-spacing:-2px;text-shadow:0 0 8px rgba(0,170,255,.8),0 0 28px rgba(0,170,255,.45)}.logo span{color:#20bfff}
 .tag{margin-top:6px;color:#8c8c94;font-size:12px;letter-spacing:2px;text-transform:uppercase}.orb{width:126px;height:126px;border-radius:50%;margin:34px 0 27px;border:1px solid #00baff;box-shadow:0 0 24px rgba(0,160,255,.5),inset 0 0 28px rgba(0,160,255,.15);display:grid;place-items:center;position:relative}.orb:before{content:"";width:66px;height:66px;border-radius:50%;border:2px solid #00baff;box-shadow:0 0 24px #00baff;animation:orbPulse 1.8s infinite}.orb:after{content:"";position:absolute;width:6px;height:6px;background:#fff;border-radius:50%;box-shadow:0 0 12px #fff}
 @keyframes orbPulse{50%{transform:scale(1.16);opacity:.55}}
@@ -94,7 +94,7 @@ button,input{font:inherit}
     <div class="alert hidden" id="alert"> </div>
     <div class="controls">
       <button class="ctrl" id="recenter">LOCATE</button>
-      <button class="ctrl primary" id="startNav" disabled>START GPS</button>
+      <button class="ctrl primary" id="startNav">START GPS</button>
       <button class="ctrl" id="stopNav">STOP</button>
     </div>
   </main>
@@ -113,7 +113,7 @@ button,input{font:inherit}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate/dist/leaflet-rotate.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.3.0/dist/leaflet-rotate.umd.min.js"></script>
 <script>
 "use strict";
 
@@ -145,6 +145,8 @@ function initRoadMap(){
   state.roadMap=L.map(host,{zoomControl:false,attributionControl:true,preferCanvas:true,zoomAnimation:false,fadeAnimation:false,rotate:!!(L.Map&&L.Map.prototype.setHeading),touchRotate:false,dragRotate:false,shiftKeyRotate:false}).setView([51.5,-0.1],15);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{subdomains:["a","b","c"],maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(state.roadMap);
   $("horizon")?.classList.add("map-ready");
+  /* The map should be visible immediately; GPS starts from the bottom cockpit control. */
+  $("startPanel")?.classList.add("hidden");
   state.gpsMarker=L.marker([51.5,-0.1],{icon:L.divIcon({className:"",html:'<div class="gps-arrow"></div>',iconSize:[30,36],iconAnchor:[15,18]}),interactive:false,zIndexOffset:1000}).addTo(state.roadMap);
   state.gpsMarker.setOpacity(0);
   state.roadMap.whenReady(()=>setTimeout(()=>state.roadMap.invalidateSize(),100));
@@ -438,7 +440,7 @@ function startGPS(){
   if(!navigator.geolocation)return toast("This browser does not provide GPS.");
   if(state.watchId!==null)navigator.geolocation.clearWatch(state.watchId);
   state.watchId=navigator.geolocation.watchPosition(onPosition,onGpsError,{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
-  state.started=true;$("startPanel").classList.add("hidden");$("startNav").textContent="NAV LIVE";
+  state.started=true;$("startPanel").classList.add("hidden");$("startNav").disabled=false;$("startNav").textContent="NAV LIVE";
   speak("GPS navigation started",true);
   toast("GPS starting…");
 }
