@@ -173,8 +173,10 @@ function updateRoadMapPosition(p){
   state.lastMapPoint=[p.latitude,p.longitude];
   if(state.started){
     state.roadMap.setView([p.latitude,p.longitude],Math.max(state.roadMap.getZoom(),16),{animate:false});
-    /* Keep the vehicle in the lower-forward camera position shown in the target cockpit. */
-    requestAnimationFrame(()=>{if(state.roadMap)state.roadMap.panBy([0,Math.round(state.roadMap.getSize().y*0.18)],{animate:false});});
+    /* Keep the vehicle near 68% down the map viewport so the road ahead stays visible.
+       Leaflet panBy shifts map content opposite to the supplied offset, so use a
+       negative Y offset to move the vehicle down-screen rather than up-screen. */
+    requestAnimationFrame(()=>{if(state.roadMap)state.roadMap.panBy([0,-Math.round(state.roadMap.getSize().y*0.18)],{animate:false});});
   }else if(!state.route){state.roadMap.setView(here,15,{animate:false});}
 }
 
