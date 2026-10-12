@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#07090d">
+<title>UK satnav — Map camera prototype</title>
+<link href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--red:#ff1744;--blue:#16baff;--panel:rgba(12,15,21,.94);--muted:#aab2bf}
+*{box-sizing:border-box}html,body,#app{margin:0;width:100%;height:100%;height:100dvh;overflow:hidden;background:#06080c;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+#map{position:absolute;inset:0;background:#0b1118}.maplibregl-ctrl-bottom-right{bottom:132px}.maplibregl-ctrl-attrib{background:rgba(0,0,0,.65)!important;color:#d4dce6!important}.maplibregl-ctrl-attrib a{color:#8bdcff!important}
+.top{position:absolute;z-index:5;top:max(10px,env(safe-area-inset-top));left:12px;right:12px;display:grid;gap:8px;pointer-events:none}.top>*{pointer-events:auto}
+.brand{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border:1px solid #292d36;border-radius:14px;background:var(--panel);box-shadow:0 8px 28px #0007}.brand strong{letter-spacing:.08em;font-size:13px}.brand span{font-size:10px;color:#ffb4c2;font-weight:800;letter-spacing:.12em}
+.search{display:flex;gap:7px;padding:7px;background:var(--panel);border:1px solid #292d36;border-radius:15px;box-shadow:0 8px 28px #0007}.search input{min-width:0;flex:1;border:0;outline:0;background:transparent;color:white;font-size:15px;padding:0 7px}.search input::placeholder{color:#9ba4b3}.btn{border:1px solid #363b47;background:#1a202a;color:white;border-radius:11px;min-height:42px;padding:0 13px;font-weight:800}.btn.primary{background:var(--red);border-color:var(--red);box-shadow:0 0 18px #ff174455}.btn.blue{background:#087fb4;border-color:#1bbaff}
+.turn{position:absolute;z-index:4;left:12px;right:12px;top:148px;min-height:68px;padding:12px 15px;display:flex;align-items:center;gap:12px;background:linear-gradient(110deg,rgba(36,8,15,.96),rgba(13,15,21,.95));border:1px solid #842439;border-radius:17px;box-shadow:0 8px 28px #0008}.turnIcon{width:43px;height:43px;display:grid;place-items:center;border-radius:12px;background:#ff174422;color:#ff4968;font-size:27px;font-weight:900}.turnText{min-width:0;flex:1}.turnText strong{display:block;font-size:16px;line-height:1.15}.turnText small{display:block;color:#bac2ce;font-size:12px;margin-top:5px}.turnDist{font-size:19px;font-weight:900;white-space:nowrap;color:#fff}
+.carArrow{width:28px;height:38px;position:relative;filter:drop-shadow(0 0 7px #00baff)}.carArrow:before{content:"";position:absolute;left:4px;top:0;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:31px solid #20c7ff}.carArrow:after{content:"";position:absolute;left:10px;top:13px;width:8px;height:18px;border-radius:5px;background:#fff}
+.bottom{position:absolute;z-index:5;left:10px;right:10px;bottom:max(9px,env(safe-area-inset-bottom));display:grid;gap:8px}.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}.stat{background:var(--panel);border:1px solid #2c313b;border-radius:13px;padding:10px 8px;text-align:center;box-shadow:0 6px 20px #0006}.stat strong{display:block;font-size:20px;line-height:1.1}.stat small{display:block;color:var(--muted);font-size:10px;letter-spacing:.06em;margin-top:5px}.speed{color:#fff}.limit{color:#ffdf71}.bar{height:4px;border-radius:9px;background:#252a34;overflow:hidden}.bar div{height:100%;width:0;background:linear-gradient(90deg,#008cff,#1bc9ff);box-shadow:0 0 12px #00baff}
+.controls{display:grid;grid-template-columns:1fr 1.35fr 1fr;gap:7px}.controls .btn{height:48px}.status{font-size:11px;color:#d8e1ec;text-align:center;padding:7px 9px;border-radius:10px;background:rgba(6,8,12,.8);border:1px solid #252a34}
+.toast{position:absolute;z-index:10;left:18px;right:18px;top:50%;transform:translateY(-50%);padding:14px;border:1px solid #4d5868;border-radius:13px;background:#111722;display:none;text-align:center;font-size:13px}.toast.show{display:block}
+.notice{font-size:10px;color:#d8c9a2;text-align:center;padding:4px;text-shadow:0 1px 3px #000}
+@media(min-width:700px){.top,.turn,.bottom{max-width:480px;left:50%;right:auto;width:calc(100% - 24px);transform:translateX(-50%)}.bottom{bottom:14px}.turn{top:150px}}
+</style>
+</head>
+<body><main id="app">
+<div id="map" aria-label="Navigation map"></div>
+<div class="top">
+  <div class="brand"><strong>UK SATNAV <span style="color:#20bfff">/ CAMERA TEST</span></strong><span>TEST BUILD · NOT FOR DRIVING</span></div>
+  <form class="search" id="searchForm"><input id="destination" autocomplete="off" placeholder="Enter destination or UK postcode" aria-label="Destination"><button class="btn primary" type="submit">ROUTE</button></form>
+</div>
+<div class="turn"><div class="turnIcon" id="turnIcon">↑</div><div class="turnText"><strong id="turnTitle">Ready for GPS</strong><small id="turnSub">Start GPS to centre the map on your position</small></div><div class="turnDist" id="turnDist">—</div></div>
+<div class="bottom">
+  <div class="stats">
+    <div class="stat speed"><strong id="speed">—</strong><small>MPH</small></div>
+    <div class="stat limit"><strong id="limit">—</strong><small>SPEED LIMIT</small></div>
+    <div class="stat"><strong id="eta">—</strong><small id="remaining">ETA · DISTANCE</small></div>
+  </div>
+  <div class="bar"><div id="progress"></div></div>
+  <div class="controls"><button class="btn" id="locate">LOCATE</button><button class="btn primary" id="gps">START GPS</button><button class="btn" id="stop">STOP</button></div>
+  <div class="status" id="status">Map loading · location is off until you press START GPS</div>
+  <div class="notice">Prototype for parked testing only. Do not rely on this for real-world navigation or speed-limit advice.</div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+</main>
+<script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const state={map:null,watch:null,position:null,lastPosition:null,heading:0,route:null,steps:[],routeCoords:[],cumulative:[],total:0,started:false,lastStep:-1,destination:null,marker:null,limit:null};
+function toast(message){const el=$("toast");el.textContent=message;el.classList.add("show");clearTimeout(toast.timer);toast.timer=setTimeout(()=>el.classList.remove("show"),3500)}
+function status(message){$("status").textContent=message}
+function rad(n){return n*Math.PI/180}
+function distance(a,b){const R=6371000,dLat=rad(b[1]-a[1]),dLon=rad(b[0]-a[0]),x=Math.sin(dLat/2)**2+Math.cos(rad(a[1]))*Math.cos(rad(b[1]))*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function bearing(a,b){const p1=rad(a[1]),p2=rad(b[1]),dl=rad(b[0]-a[0]);return (Math.atan2(Math.sin(dl)*Math.cos(p2),Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl))*180/Math.PI+360)%360}
+function fmtDist(m){return m<1000?Math.max(0,Math.round(m/10)*10)+" m":(m/1000).toFixed(m<10000?1:0)+" km"}
+function fmtTime(sec){const d=new Date(Date.now()+sec*1000);return d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"})}
+function setTurn(title,sub,dist,icon){$("turnTitle").textContent=title;$("turnSub").textContent=sub;$("turnDist").textContent=dist;$("turnIcon").textContent=icon||"↑"}
+function initMap(){
+  if(!window.maplibregl){status("Map library failed to load. Check connection and reload.");return}
+  state.map=new maplibregl.Map({container:"map",style:"https://tiles.openfreemap.org/styles/dark",center:[-2.7,52.05],zoom:6.7,pitch:55,bearing:0,antialias:true,attributionControl:true,renderWorldCopies:false,cooperativeGestures:true});
+  state.map.addControl(new maplibregl.NavigationControl({showCompass:true,showZoom:false,visualizePitch:false}),"bottom-right");
+  state.map.on("error",e=>{const msg=e?.error?.message||"Map resource error";status("Map warning: "+msg.slice(0,110))});
+  state.map.on("load",()=>{
+    state.map.addSource("route",{type:"geojson",data:{type:"FeatureCollection",features:[]}});
+    state.map.addLayer({id:"route-glow-wide",type:"line",source:"route",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#00aaff","line-width":15,"line-opacity":.22,"line-blur":5}});
+    state.map.addLayer({id:"route-glow",type:"line",source:"route",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#00baff","line-width":9,"line-opacity":.65,"line-blur":2}});
+    state.map.addLayer({id:"route-core",type:"line",source:"route",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#9cecff","line-width":3.5,"line-opacity":1}});
+    status("Map ready · press START GPS to get your position");
+  });
+}
+function setRoute(coords){if(!state.map||!state.map.getSource("route"))return;state.map.getSource("route").setData({type:"Feature",properties:{},geometry:{type:"LineString",coordinates:coords}})}
+function clearRoute(){state.route=null;state.steps=[];state.routeCoords=[];state.cumulative=[];state.total=0;if(state.map?.getSource("route"))setRoute([]);setTurn(state.position?"GPS live":"Ready for GPS",state.position?"Search for a destination to plan a route":"Start GPS to centre the map on your position","—","↑");$("eta").textContent="—";$("remaining").textContent="ETA · DISTANCE";$("progress").style.width="0%"}
+async function geocode(query){const url="https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=gb&q="+encodeURIComponent(query);const r=await fetch(url,{headers:{"Accept":"application/json"}});if(!r.ok)throw Error("Address search unavailable ("+r.status+")");const data=await r.json();if(!data.length)throw Error("No UK destination found. Try a fuller address or postcode.");return {coord:[Number(data[0].lon),Number(data[0].lat)],name:data[0].display_name}}
+async function planRoute(){
+  const query=$("destination").value.trim();if(!query){toast("Enter a destination or postcode first.");return}
+  if(!state.position){toast("Press START GPS and allow location first.");return}
+  try{
+    status("Finding destination…");const dest=await geocode(query);state.destination=dest;
+    status("Calculating road route…");
+    const from=state.position.coords, url="https://router.project-osrm.org/route/v1/driving/"+from.longitude+","+from.latitude+";"+dest.coord[0]+","+dest.coord[1]+"?overview=full&geometries=geojson&steps=true";
+    const r=await fetch(url);if(!r.ok)throw Error("Route service unavailable ("+r.status+")");const data=await r.json();if(data.code!=="Ok"||!data.routes?.length)throw Error("No driving route returned.");
+    const route=data.routes[0];state.route=route;state.routeCoords=route.geometry.coordinates;state.steps=route.legs.flatMap(l=>l.steps||[]);state.cumulative=[0];for(let i=1;i<state.routeCoords.length;i++)state.cumulative[i]=state.cumulative[i-1]+distance(state.routeCoords[i-1],state.routeCoords[i]);state.total=state.cumulative[state.cumulative.length-1]||route.distance;
+    setRoute(state.routeCoords);state.lastStep=-1;
+    $("destination").value=dest.name.split(",").slice(0,2).join(",");status("Route loaded · "+state.routeCoords.length+" road points · "+fmtDist(route.distance));
+    if(state.position)followPosition(state.position.coords,true);
+    updateProgress();toast("Driving route calculated.");
+  }catch(e){status("Route error: "+e.message);toast(e.message)}
+}
+function closestRoute(coord){let best=Infinity,idx=0;for(let i=0;i<state.routeCoords.length;i++){const d=distance(coord,state.routeCoords[i]);if(d<best){best=d;idx=i}}return {idx,meters:state.cumulative[idx]||0,off:best}}
+function instruction(step){if(!step)return ["Continue on the route","Continue following the route","↑"];const m=step.maneuver||{},type=m.type||"",mod=m.modifier||"";if(type==="arrive")return ["You have arrived","Destination reached","●"];if(type==="roundabout"||type==="rotary")return ["At the roundabout, take exit "+(m.exit||""),"Follow the highlighted route","↻"];if(type==="turn"||type==="end of road"||type==="fork"){const words={"left":"Turn left","slight left":"Bear left","sharp left":"Turn sharp left","right":"Turn right","slight right":"Bear right","sharp right":"Turn sharp right","straight":"Continue straight","uturn":"Make a U-turn"};return [words[mod]||"Follow the route",step.name||"Continue on the road",mod.includes("left")?"↰":mod.includes("right")?"↱":"↑"]}if(type==="merge")return ["Merge safely",step.name||"Continue on the road","↗"];if(type==="on ramp")return ["Take the slip road",step.name||"Join the road","↗"];if(type==="off ramp")return ["Take the exit",step.name||"Leave the road","↗"];if(type==="depart")return ["Start driving",step.name||"Follow the route","↑"];return [step.name||"Continue on the route",type==="new name"?"Continue on the road":"Follow the highlighted route","↑"]}
+function updateProgress(){if(!state.route||!state.position)return;const c=[state.position.coords.longitude,state.position.coords.latitude],near=closestRoute(c),travel=near.meters,remaining=Math.max(0,state.total-travel);let acc=0,idx=state.steps.findIndex(s=>{acc+=s.distance||0;return acc>travel+18});if(idx<0)idx=Math.max(0,state.steps.length-1);const step=state.steps[idx];if(step){const end=state.steps.slice(0,idx).reduce((sum,s)=>sum+(s.distance||0),0);const toTurn=Math.max(0,end-travel);const [title,sub,icon]=instruction(step);setTurn(title,sub,fmtDist(toTurn),icon);state.lastStep=idx}
+$("eta").textContent=fmtTime((state.route.duration||0)*(remaining/(state.total||1)));$("remaining").textContent=fmtDist(remaining)+" LEFT";$("progress").style.width=Math.min(100,travel/(state.total||1)*100)+"%";if(near.off>90&&travel<state.total-80)status("Off the mapped route · route recalculation is not yet implemented in this prototype")}
+function followPosition(coords,animate=false){
+  const point=[coords.longitude,coords.latitude];if(!state.map)return;
+  if(state.marker)state.marker.setLngLat(point);else{const el=document.createElement("div");el.className="carArrow";state.marker=new maplibregl.Marker({element:el,anchor:"center",rotationAlignment:"viewport"}).setLngLat(point).addTo(state.map)}
+  let head=Number.isFinite(coords.heading)&&coords.heading>=0?coords.heading:null;
+  if(head===null&&state.lastPosition){const prev=[state.lastPosition.longitude,state.lastPosition.latitude];if(distance(prev,point)>5)head=bearing(prev,point)}
+  if(head!==null&&Number.isFinite(head))state.heading=head;
+  const h=window.innerHeight||700;
+  state.map.easeTo({center:point,zoom:state.route?17.2:16.2,pitch:58,bearing:state.heading,padding:{top:Math.round(h*.34),bottom:0,left:0,right:0},duration:animate?700:220,essential:true});
+  if(state.marker){const el=state.marker.getElement();el.style.transform="translate(-50%,-50%) rotate("+((state.heading-state.map.getBearing()+360)%360)+"deg)"}
+  state.lastPosition={longitude:coords.longitude,latitude:coords.latitude};
+  $("speed").textContent=coords.speed!=null&&coords.speed>=0?Math.round(coords.speed*2.23694):"—";
+  $("limit").textContent="—";updateProgress();
+}
+function onPosition(pos){state.position=pos;followPosition(pos.coords);$("gps").textContent="GPS LIVE";status("GPS fix received · heading "+Math.round(state.heading)+"°");}
+function onGpsError(err){const msg=err.code===1?"Location permission denied. Allow location for this site in Chrome settings.":err.code===3?"GPS timed out. Move to a clearer view of the sky and retry.":"Location unavailable. Check device location settings.";status(msg);toast(msg);$("gps").textContent="START GPS"}
+function startGPS(){if(!navigator.geolocation){toast("This browser does not support location.");return}if(state.watch!==null)navigator.geolocation.clearWatch(state.watch);state.started=true;$("gps").textContent="GPS STARTING";status("Waiting for a GPS fix… allow the location prompt");state.watch=navigator.geolocation.watchPosition(onPosition,onGpsError,{enableHighAccuracy:true,maximumAge:1000,timeout:20000});toast("GPS requested. Allow location access.");}
+function stopGPS(){if(state.watch!==null)navigator.geolocation.clearWatch(state.watch);state.watch=null;state.started=false;$("gps").textContent="START GPS";status("GPS stopped · map remains available");}
+$("searchForm").addEventListener("submit",e=>{e.preventDefault();planRoute()});
+$("gps").addEventListener("click",startGPS);$("stop").addEventListener("click",stopGPS);
+$("locate").addEventListener("click",()=>{if(state.position)followPosition(state.position.coords,true);else startGPS()});
+initMap();
+window.addEventListener("resize",()=>{if(state.map){state.map.resize();if(state.position)followPosition(state.position.coords,true)}});
+window.addEventListener("beforeunload",()=>{if(state.watch!==null)navigator.geolocation.clearWatch(state.watch)});
+</script>
+</body></html>
