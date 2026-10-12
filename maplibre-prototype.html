@@ -92,13 +92,13 @@ function updateProgress(){if(!state.route||!state.position)return;const c=[state
 $("eta").textContent=fmtTime((state.route.duration||0)*(remaining/(state.total||1)));$("remaining").textContent=fmtDist(remaining)+" LEFT";$("progress").style.width=Math.min(100,travel/(state.total||1)*100)+"%";if(near.off>90&&travel<state.total-80)status("Off the mapped route · route recalculation is not yet implemented in this prototype")}
 function followPosition(coords,animate=false){
   const point=[coords.longitude,coords.latitude];if(!state.map)return;
-  if(state.marker)state.marker.setLngLat(point);else{const el=document.createElement("div");el.className="carArrow";state.marker=new maplibregl.Marker({element:el,anchor:"center",rotationAlignment:"viewport"}).setLngLat(point).addTo(state.map)}
+  if(state.marker)state.marker.setLngLat(point);else{const root=document.createElement("div");root.className="markerRoot";const arrow=document.createElement("div");arrow.className="carArrow";root.appendChild(arrow);state.marker=new maplibregl.Marker({element:root,anchor:"center",rotationAlignment:"viewport"}).setLngLat(point).addTo(state.map)}
   let head=Number.isFinite(coords.heading)&&coords.heading>=0?coords.heading:null;
   if(head===null&&state.lastPosition){const prev=[state.lastPosition.longitude,state.lastPosition.latitude];if(distance(prev,point)>5)head=bearing(prev,point)}
   if(head!==null&&Number.isFinite(head))state.heading=head;
   const h=window.innerHeight||700;
   state.map.easeTo({center:point,zoom:state.route?17.2:16.2,pitch:58,bearing:state.heading,padding:{top:Math.round(h*.34),bottom:0,left:0,right:0},duration:animate?700:220,essential:true});
-  if(state.marker){const el=state.marker.getElement();el.style.transform="translate(-50%,-50%) rotate("+((state.heading-state.map.getBearing()+360)%360)+"deg)"}
+  if(state.marker){const arrow=state.marker.getElement().querySelector(".carArrow");if(arrow)arrow.style.transform="rotate("+((state.heading-state.map.getBearing()+360)%360)+"deg)"}
   state.lastPosition={longitude:coords.longitude,latitude:coords.latitude};
   $("speed").textContent=coords.speed!=null&&coords.speed>=0?Math.round(coords.speed*2.23694):"—";
   $("limit").textContent="—";updateProgress();
