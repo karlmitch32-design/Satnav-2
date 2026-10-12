@@ -65,6 +65,7 @@ function initMap(){
     state.map.addLayer({id:"route-glow-wide",type:"line",source:"route",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#00aaff","line-width":15,"line-opacity":.22,"line-blur":5}});
     state.map.addLayer({id:"route-glow",type:"line",source:"route",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#00baff","line-width":9,"line-opacity":.65,"line-blur":2}});
     state.map.addLayer({id:"route-core",type:"line",source:"route",layout:{"line-join":"round","line-cap":"round"},paint:{"line-color":"#9cecff","line-width":3.5,"line-opacity":1}});
+    if(state.routeCoords.length)setRoute(state.routeCoords);
     status("Map ready · press START GPS to get your position");
   });
 }
