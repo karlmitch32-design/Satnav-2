@@ -113,6 +113,7 @@ button,input{font:inherit}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate/dist/leaflet-rotate.umd.min.js"></script>
 <script>
 "use strict";
 
@@ -141,7 +142,7 @@ setInterval(clock,1000);clock();
 function initRoadMap(){
   if(!window.L||state.roadMap)return;
   const host=$("roadMap");if(!host)return;
-  state.roadMap=L.map(host,{zoomControl:false,attributionControl:true,preferCanvas:true,zoomAnimation:false,fadeAnimation:false}).setView([51.5,-0.1],15);
+  state.roadMap=L.map(host,{zoomControl:false,attributionControl:true,preferCanvas:true,zoomAnimation:false,fadeAnimation:false,rotate:!!(L.Map&&L.Map.prototype.setHeading),touchRotate:false,dragRotate:false,shiftKeyRotate:false}).setView([51.5,-0.1],15);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{subdomains:["a","b","c"],maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(state.roadMap);
   $("horizon")?.classList.add("map-ready");
   state.gpsMarker=L.marker([51.5,-0.1],{icon:L.divIcon({className:"",html:'<div class="gps-arrow"></div>',iconSize:[30,36],iconAnchor:[15,18]}),interactive:false,zIndexOffset:1000}).addTo(state.roadMap);
@@ -169,7 +170,7 @@ function updateRoadMapPosition(p){
     const old=state.lastMapPoint;
     if(hav(old[0],old[1],p.latitude,p.longitude)>2)hdg=bearing(old[0],old[1],p.latitude,p.longitude);
   }
-  if(hdg!==null){state.lastMapBearing=hdg;const el=state.gpsMarker?.getElement()?.querySelector(".gps-arrow");if(el)el.style.transform=`rotate(${hdg}deg)`;}
+  if(hdg!==null){state.lastMapBearing=hdg;if(state.started&&typeof state.roadMap.setHeading==="function")state.roadMap.setHeading(hdg,{ease:0.22,deadzone:1});}
   state.lastMapPoint=[p.latitude,p.longitude];
   if(state.started){
     state.roadMap.setView([p.latitude,p.longitude],Math.max(state.roadMap.getZoom(),16),{animate:false});
